@@ -1,0 +1,42 @@
+# Local credentials; only a placeholder example may be versioned.
+.env
+.env.*
+!.env.example
+
+# All personal sources, checkpoints, databases, exports and private evaluations.
+/data/
+/.local/
+/artifacts/
+/output/
+/tmp/
+/evaluations/private/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.log
+/logs/
+
+# Python environments and generated files.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+build/
+dist/
+
+# Editor / OS local state.
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

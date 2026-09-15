@@ -1,0 +1,7 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}个人求职管家{% endblock %} · 本地工作台</title><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/resume-v2.css"></head>
+<body><main><header><a class="brand" href="/?corpus={{ corpus }}">个人求职管家<span class="brand-dot">.</span></a><span class="badge">第二版 · 定制简历</span></header>
+<nav aria-label="主导航"><a href="/?corpus={{ corpus }}">求职看板</a><a href="/documents?corpus={{ corpus }}">原始资料</a><a href="/profile?corpus={{ corpus }}">已确认档案</a><a class="scope-switch" href="/?corpus={{ 'personal' if corpus == 'demo' else 'demo' }}">切换到{{ '真实资料区' if corpus == 'demo' else '虚构测试区' }} ↗</a></nav>
+<div class="scope"><span class="scope-dot"></span><strong>{{ '虚构测试区' if corpus == 'demo' else '真实资料区' }}</strong><span>{{ '人物、公司与经历均为虚构；确认后也只用于测试。' if corpus == 'demo' else '这里仅存放你自行导入并确认的真实资料。' }}</span></div>
+{% block content %}{% endblock %}
+<footer><span>本地保存 · 事实由你确认 · {{ '岗位任务默认离线模拟' if mode == 'mock' else '岗位任务默认 DeepSeek' }}</span><a href="/health">服务状态 ↗</a></footer></main></body></html>

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}{% from 'forms.html' import hidden with context %}{% block content %}
+<section class="intro compact"><p class="eyebrow">AGENT WORKFLOW · <a href="/jobs/{{ snapshot.job_id }}">返回岗位 ↗</a></p><h1 class="small-title">{{ snapshot.title }}</h1><p class="lede">{{ snapshot.company }} · {{ '离线流程演示' if task.mode=='mock' else 'DeepSeek 实际运行' }}</p></section>
+<section class="card" {% if task.status in ['queued','processing'] %}data-task-poll="{{ task.id }}"{% endif %}>
+<div class="section-heading"><h2>{{ task_labels[task.status] }}</h2><span class="tag">{{ task.created_at|localtime }}</span></div>
+<ol class="workflow-steps"><li>检索已确认事实</li><li>逐条分析要求</li><li>补充并确认</li><li>编辑草稿</li><li>保存材料版本</li></ol>
+<p class="hint"><span data-model-count>模型请求 {{ task.model_calls }} / {{ task.limits.max_model_calls }}</span> · <span data-tool-count>工具尝试 {{ task.tool_calls }} / {{ task.limits.max_tool_calls }}</span> · {{ task.elapsed }} 秒 · Token {{ task.tokens if task.tokens is not none else '未知（未返回用量或离线模拟）' }}</p>
+<p class="hint">限流或服务暂不可用最多重试 {{ task.limits.get('max_retries',0) }} 次，每次计入总预算；超时、断网或结果未落盘会停止。{% if task.unknown_usage_calls %}已知累计 {{ task.known_tokens }} Token，另有 {{ task.unknown_usage_calls }} 次用量未知。{% endif %}</p>
+{% if task.mode=='mock' %}<p class="hint">离线规则只验证流程。复杂要求的匹配结论需要人工核对；真实模型效果另行验证。</p>{% endif %}
+{% if task.error_code %}<div class="alert">{{ task_errors.get(task.error_code, model_errors.get(task.error_code, '运行停止，记录已保留。')) }}</div>{% endif %}
+{% if task.status in ['queued','processing'] %}<p class="hint" aria-live="polite">{{ '请修复上面的存储问题后继续任务。' if task.error_code else '正在执行，页面会自动更新。若刚重启服务，可继续上次未完成的步骤。' }}</p><form method="post" action="/tasks/{{ task.id }}/respond">{{ hidden(csrf,corpus,task.revision) }}<button class="secondary" name="action" value="continue">继续未完成任务</button></form>{% if not task.error_code %}<script src="/static/task.js" defer></script>{% endif %}{% endif %}
+{% if task.status=='failed' %}<p><a href="/jobs/{{ snapshot.job_id }}">返回岗位，检查资料后新建任务</a></p>{% endif %}
+{% if task.material %}<p>已保存材料 <a href="/materials/{{ task.material.id }}">版本 {{ task.material.version }}，查看与导出 ↗</a></p>{% endif %}
+</section>
+{% set wait=task.view.get('wait') %}
+{% if wait and task.status in ['waiting_input','waiting_confirmation'] %}
+<section class="card human-step">
+{% if wait.kind=='input' %}<p class="eyebrow">需要你补充 · 还有 {{ wait.remaining }} 条待处理</p><h2>{{ wait.question }}</h2>
+<p class="hint">缺信息保持未知。回答先保存为待确认资料，确认后才参与分析。</p>{% if task.deferred %}<div class="alert">已记为稍后回答。任务和进度会保留，准备好后在这里继续。</div>{% endif %}
+<form method="post" action="/tasks/{{ task.id }}/respond">{{ hidden(csrf,corpus,task.revision) }}
+<label>补充说明（一条经历，用一段文字说明）<textarea name="text" rows="4" maxlength="1000" required placeholder="{{ '请输入虚构测试经历，勿填写真实个人信息。' if corpus=='demo' else '请描述可核实的事实，未确定的部分直接说明未知。' }}"></textarea></label>
+<label>事实分类<select name="category">{% for key,label in categories.items() %}<option value="{{ key }}" {{ 'selected' if key=='project' else '' }}>{{ label }}</option>{% endfor %}</select></label>
+<div class="actions"><button name="action" value="answer">提交补充，进入核对</button><button class="secondary" name="action" value="later" formnovalidate>稍后回答</button><button class="secondary" name="action" value="skip" formnovalidate>暂不回答此项</button><button class="secondary" name="action" value="skip_all" formnovalidate>暂不补充，生成草稿</button></div></form>
+{% elif wait.kind=='fact' %}<p class="eyebrow">补充事实核对</p><h2>确认这段补充后，Agent 才能引用</h2>
+{% for fact in answer.facts %}<blockquote>{{ fact.text }}</blockquote><p class="hint">{{ categories[fact.category] }} · 修订 {{ fact.revision }} · {{ fact.status }}</p>{% endfor %}
+<p><a href="/documents/{{ answer.id }}">查看原文或修改候选事实 ↗</a></p>
+<form method="post" action="/tasks/{{ task.id }}/respond">{{ hidden(csrf,corpus,task.revision) }}<input type="hidden" name="review_token" value="{{ review_token }}"><div class="actions"><button name="action" value="confirm_fact">确认以上补充为事实并继续</button><button class="secondary" name="action" value="reject_fact">不采用补充，保持未知</button></div></form>
+{% elif wait.kind=='draft' %}<p class="eyebrow">材料草稿 · 待你确认</p><h2>核对表达，再保存为材料版本</h2><p class="hint">自动生成部分引用已确认事实原句。你的编辑会单独留存，不会自动变成个人事实。当前草稿修订 {{ task.draft.revision }}。</p>
+<form method="post" action="/tasks/{{ task.id }}/draft">{{ hidden(csrf,corpus,task.revision) }}<input type="hidden" name="draft_revision" value="{{ task.draft.revision }}"><label>材料内容<textarea name="content" rows="22" maxlength="30000" required>{{ task.draft.content }}</textarea></label><div class="actions"><button class="secondary" name="action" value="edit">保存编辑，稍后确认</button><button name="action" value="confirm">确认当前内容并保存版本</button></div></form>
+{% endif %}</section>{% endif %}
+{% if task.view.get('items') %}<section class="section"><div class="section-heading"><h2>岗位分析</h2><span class="hint">加分项未知不等于不符合任职门槛</span></div>
+{% for item in task.view['items'] %}{% set req=requirements[item.requirement_id] %}<article class="card finding {{ item.status }}"><div class="section-heading"><strong>{{ req.kind }} · {{ req.text }}</strong><span class="tag {{ 'warning' if item.status!='supported' else '' }}">{{ result_labels[item.status] }}</span></div><p>{{ item.reason }}</p>
+<p class="hint">JD 来源：{% for s in req.sources %}第 {{ s.line }} 行 {% else %}岗位字段（{{ '用户修订' if req.method=='user_edit' else '请对照岗位原文' }}）{% endfor %} · 要求 {{ req.id }}{% if task.view.decisions.get(req.id)=='skipped' %} · 已暂不回答，本任务不再追问{% elif task.view.decisions.get(req.id)=='answered' %} · 已补充确认{% endif %}</p>
+{% for fact_id in item.fact_ids %}{% set fact=task.view.evidence[fact_id] %}<blockquote>{{ fact.text }}</blockquote><p class="hint"><a href="/documents/{{ fact.document_id }}">{{ fact.name }} ↗</a> · 事实修订 {{ fact.revision }}{% for s in fact.sources %} · {{ ('第 ' ~ s.page ~ ' 页，') if s.page else '' }}第 {{ s.line }} 行{% endfor %}</p>{% endfor %}</article>{% endfor %}</section>{% endif %}
+<section class="card"><h2>运行记录</h2><p class="hint">模型提出工具调用 → 程序校验并检索 → 结果交回模型。请求和结果仅保存在本地；缺失用量不按零计算。</p>
+{% for attempt in task.attempts %}<details><summary>{{ loop.index }} · {{ '模型请求' if attempt.kind=='model' else '工具执行' }} · {{ attempt.status }} · {{ attempt.elapsed_seconds|round(3) if attempt.elapsed_seconds is not none else '耗时未知' }} 秒</summary>{% if attempt.error_code %}<p class="alert">{{ task_errors.get(attempt.error_code,model_errors.get(attempt.error_code,'运行停止')) }}</p>{% endif %}<p class="hint">请求</p><pre class="trace">{{ attempt.request|tojson(indent=2) }}</pre><p class="hint">结果</p><pre class="trace">{{ attempt.result|tojson(indent=2) }}</pre></details>{% else %}<p class="hint">尚未开始调用。</p>{% endfor %}</section>
+{% endblock %}

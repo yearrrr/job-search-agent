@@ -1,0 +1,5 @@
+{% macro hidden(csrf, corpus, revision=none) -%}
+<input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="operation_id" value="{{ op_id() }}"><input type="hidden" name="corpus" value="{{ corpus }}">
+{% if revision is not none %}<input type="hidden" name="revision" value="{{ revision }}">{% endif %}
+{%- endmacro %}
+{% macro kind() -%}<label>资料类型<select name="kind"><option value="resume">简历</option><option value="project">项目 / 经历补充</option><option value="notes">学习笔记（不作为个人经历）</option></select></label>{%- endmacro %}

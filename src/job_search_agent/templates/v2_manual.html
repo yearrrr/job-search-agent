@@ -1,0 +1,11 @@
+{% extends 'base.html' %}{% from 'forms.html' import hidden with context %}
+{% block title %}补充个人经历{% endblock %}{% block content %}
+<section class="intro compact"><a href="/profile?corpus={{ corpus }}">← 已确认档案</a><h1 class="small-title">补充简历之外的经历</h1><p class="lede">项目、实习和其他经历都可以独立维护，无需先修改原简历。填写后进入核对页确认。</p></section>
+<section class="card"><form method="post" action="/v2/profile/new">
+{{ hidden(csrf,corpus) }}
+<label>名称<input name="title" maxlength="150" required placeholder="例如：个人知识库问答项目"></label>
+<label>分类<select name="category">{% for k in ['project','experience','skill','education','award','publication','basic','other'] %}<option value="{{ k }}">{{ categories[k] }}</option>{% endfor %}</select></label>
+<div class="entry-fields"><label>时间<input name="period" maxlength="100"></label><label>学校 / 单位<input name="organization" maxlength="200"></label><label>角色<input name="role" maxlength="200"></label><label>技术 / 技能（逗号分隔）<input name="technologies" maxlength="2000"></label></div>
+<label>职责、方法与成果<textarea name="description" rows="8" maxlength="3500" required placeholder="填写实际做过的工作，未提供的信息可留空。"></textarea></label>
+<button>保存并核对 →</button></form></section>
+{% endblock %}

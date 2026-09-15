@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% block title %}{{ run_label }}{% endblock %}{% block content %}
+<section class="intro compact"><a href="{{ '/jobs/new?corpus=' + corpus if run.kind=='jd' else '/jobs/' + run.target_id }}">← {{ '导入岗位' if run.kind=='jd' else '岗位详情' }}</a><p class="eyebrow">{{ '第三批' if run.kind in ['recommendation','resume'] else '第二批' }} / {{ run_label }}</p><h1 class="small-title">{{ '核对这份岗位信息。' if run.kind=='jd' else run.snapshot.company + ' · ' + run.snapshot.title }}</h1></section>
+<div data-run-id="{{ run.id }}" data-run-status="{{ run.status }}"><div id="run-content">{% include 'v2_run_content.html' %}</div></div>
+<script src="/static/job-v2.js" defer></script><script src="/static/resume-v2.js" defer></script>{% endblock %}

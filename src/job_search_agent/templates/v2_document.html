@@ -1,0 +1,26 @@
+{% extends 'base.html' %}{% from 'forms.html' import hidden with context %}
+{% block title %}核对完整经历{% endblock %}
+{% block content %}
+<section class="intro compact">
+<a href="/documents?corpus={{ corpus }}">← 原始资料</a>
+<p class="eyebrow">01 资料解析 → 02 核对经历 → 03 导入岗位</p>
+<h1 class="small-title">{{ doc.name }}</h1>
+<p class="lede">对照原件核对完整经历。确认、修改与排除会直接保存，其他卡片的输入会保留。</p>
+<a href="/documents/{{ doc.id }}/original">下载原件</a>
+</section>
+<section class="card" id="parse-panel" data-document="{{ doc.id }}"
+ data-task="{{ parse_job.id if parse_job else '' }}"
+ data-active="{{ 'yes' if parse_job and parse_job.status in ['queued','processing'] else 'no' }}">
+<div class="section-heading"><h2>LLM 解析</h2><a href="/v2/profile/new?corpus={{ corpus }}">另行补充项目 / 经历 ↗</a></div>
+<p class="hint">解析会将本份资料的文字或页面图像发送至 DeepSeek，可能包含姓名与联系方式。结果先进入待确认区，重新解析不会覆盖已经保存的经历。</p>
+{% if not key_configured %}<p class="alert">尚未配置模型密钥。原件已保留，配置后可在这里继续解析。</p>{% endif %}
+<form action="/v2/documents/{{ doc.id }}/parse" method="post" data-parse-form>
+{{ hidden(csrf,corpus) }}<button class="secondary" {{ 'disabled' if not key_configured else '' }}>继续 / 用 LLM 重新解析</button>
+</form>
+<p id="parse-message" role="status" aria-live="polite">{% if parse_job %}{{ {'queued':'等待解析','processing':'正在理解资料并整理经历…','completed':'解析完成','failed':'解析未完成'}[parse_job.status] }} {{ parse_job.message }}{% else %}尚未调用模型。{% endif %}</p>
+<p id="parse-usage" class="hint"></p>
+<button type="button" id="load-parsed" class="secondary" hidden>载入新解析结果（会丢弃未保存编辑）</button>
+</section>
+<div id="review-content">{% include 'v2_entries.html' %}</div>
+<script src="/static/profile.js" defer></script>
+{% endblock %}

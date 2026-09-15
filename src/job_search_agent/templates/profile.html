@@ -1,0 +1,16 @@
+{% extends 'base.html' %}{% from 'forms.html' import hidden with context %}
+{% block title %}已确认档案{% endblock %}{% block content %}
+<section class="intro compact"><p class="eyebrow">02 / 个人经历库</p><h1>你的已确认档案。</h1><p class="lede">简历之外的项目也可以独立补充。岗位分析仅使用你已确认的经历。</p>
+<div class="actions"><a class="button" href="/v2/profile/new?corpus={{ corpus }}">补充项目 / 经历</a><a class="button" href="/jobs/new?corpus={{ corpus }}">下一步：导入岗位 →</a></div></section>
+<div class="two-col"><section><h2>已确认事实 <span class="hint">{{ facts|length }} 条</span></h2>
+{% if not facts %}<div class="empty">尚未确认任何事实。<a href="/documents?corpus={{ corpus }}">去核对资料</a></div>{% endif %}
+{% for category in ['project','experience','skill','education','award','publication','basic','other'] %}
+<section><h2>{{ categories[category] }}</h2>
+{% for fact in facts if fact.category == category %}<article class="card"><p class="preserve">{{ fact.text }}</p><a class="hint" href="/v2/documents/{{ fact.document_id }}">{{ fact.name }} · 查看来源或修改 ↗</a><p class="hint">确认于 {{ fact.confirmed_at|localtime }}</p></article>{% else %}<p class="hint">暂无已确认内容</p>{% endfor %}
+</section>{% endfor %}</section>
+<section class="card align-start"><h2>求职偏好</h2><p class="hint">留空表示尚未设置。</p><form method="post" action="/profile/preferences" data-preferences-form>{{ hidden(csrf,corpus,preferences.revision) }}
+<label>目标岗位<input name="roles" maxlength="500" value="{{ preferences.roles }}" placeholder="例如：AI 应用开发、AI Agent 工程师"></label>
+<label>意向城市<input name="cities" maxlength="500" value="{{ preferences.cities }}"></label>
+<label>其他偏好<textarea name="notes" maxlength="2000" rows="4">{{ preferences.notes }}</textarea></label>
+<button>确认保存偏好</button><p class="entry-message" role="status" aria-live="polite"></p></form></section></div>
+<script src="/static/profile.js" defer></script>{% endblock %}

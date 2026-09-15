@@ -1,0 +1,4 @@
+.resume-check{display:flex;align-items:center;gap:10px;line-height:1.6}
+.resume-check input[type=checkbox]{width:18px;height:18px;flex:none;margin:0}
+.resume-group{margin-top:24px}.resume-group h3{font-size:17px}
+.resume-group .record{padding:14px 0}.resume-group .actions{margin:8px 0}

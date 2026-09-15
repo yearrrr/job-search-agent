@@ -1,0 +1,51 @@
+{% from 'forms.html' import hidden with context %}
+<div class="review-summary card">
+<strong>本份资料：<span data-count="confirmed">{{ doc.counts.confirmed }}</span> 条已确认 · <span data-count="pending">{{ doc.counts.pending }}</span> 条待确认 · <span data-count="rejected">{{ doc.counts.rejected }}</span> 条已排除</strong>
+<p class="hint">后续岗位分析仅使用已确认内容。缺失的模块可以稍后补充。</p>
+{% if doc.legacy_pending_count %}<label class="check-label"><input type="checkbox" data-hide-legacy {{ 'checked' if doc.has_llm_entries else '' }}>收起旧版规则候选（{{ doc.legacy_pending_count }} 条）</label><p class="hint">上方统计包含旧版记录；收起后，批量操作仅处理可见卡片。旧内容与历史均保留。</p>{% endif %}
+<div class="category-links">{% for key in main_categories + ('basic','other') %}<a href="#category-{{ key }}">{{ categories[key] }}</a>{% endfor %}</div>
+<div class="actions">
+<button type="button" class="secondary" data-select-pending>选中全部待确认</button>
+<button type="button" data-batch="confirmed">确认所选（含当前编辑）</button>
+<button type="button" class="secondary" data-batch="rejected">排除所选</button>
+</div><p id="batch-message" role="status" aria-live="polite"></p>
+</div>
+<div class="review-layout">
+<aside class="card review-sources"><h2>原件与来源</h2>
+{% if doc.pages %}
+{% for p in doc.pages %}<figure id="source-{{ p.snippet_id }}"><figcaption>第 {{ p.page }} 页 · <a href="/v2/documents/{{ doc.id }}/pages/{{ p.page }}" target="_blank" rel="noopener">放大查看</a></figcaption><img src="/v2/documents/{{ doc.id }}/pages/{{ p.page }}" alt="原件第 {{ p.page }} 页" loading="lazy"></figure>{% endfor %}
+{% else %}
+<div class="source-text">{% for s in doc.snippets %}<p id="source-{{ s.id }}"><span class="line-label">{% if s.page %}第 {{ s.page }} 页 · {% endif %}第 {{ s.line }} 行</span>{{ s.text }}</p>{% else %}<p>PDF / 图片将在解析时转换为可对照的页面。</p>{% endfor %}</div>
+{% endif %}</aside>
+<section class="review-entries">
+{% for key in main_categories + ('basic','other') %}
+<section id="category-{{ key }}" class="entry-category">
+<h2>{{ categories[key] }} <span class="hint" data-category-count>{{ doc.facts|selectattr('category','equalto',key)|rejectattr('hidden_legacy')|list|length }} 条</span></h2>
+{% for fact in doc.facts if fact.category == key %}
+<article class="card entry-card" data-fact="{{ fact.id }}" data-status="{{ fact.status }}" data-legacy="{{ 'yes' if fact.method == 'local' else 'no' }}" {{ 'hidden' if fact.hidden_legacy else '' }}>
+<div class="section-heading"><label class="check-label"><input type="checkbox" data-select-entry aria-label="选择 {{ fact.title }}">选择此条</label><span class="tag" data-status-label>{{ {'pending':'待确认','confirmed':'已确认','rejected':'已排除'}[fact.status] }}</span></div>
+<form action="/v2/documents/{{ doc.id }}/review" method="post" data-entry-form>
+{{ hidden(csrf,corpus,fact.revision) }}
+<label>名称<input name="title" maxlength="200" value="{{ fact.title }}" required></label>
+<label>分类<select name="category">{% for k,v in categories.items() %}<option value="{{ k }}" {{ 'selected' if k == fact.category else '' }}>{{ v }}</option>{% endfor %}</select></label>
+<div class="entry-fields">
+<label>时间<input name="period" maxlength="100" value="{{ fact.metadata.period }}" placeholder="原件未提供可留空"></label>
+<label>学校 / 单位<input name="organization" maxlength="200" value="{{ fact.metadata.organization }}"></label>
+<label>角色<input name="role" maxlength="200" value="{{ fact.metadata.role }}"></label>
+<label>技术 / 技能（逗号分隔）<input name="technologies" maxlength="2000" value="{{ fact.metadata.technologies|join(', ') }}"></label>
+</div>
+<label>职责、方法与成果<textarea name="description" rows="5" maxlength="4000" required>{{ fact.metadata.description }}</textarea></label>
+<details {% if fact.metadata.review_notes %}open{% endif %}><summary>需要核对的内容</summary><textarea name="review_notes" maxlength="600" aria-label="需要核对的内容">{{ fact.metadata.review_notes }}</textarea></details>
+<p class="hint">来源：{% for source in fact.sources %}<a href="{% if source.line == 0 or not doc.pages %}#source-{{ source.id }}{% else %}/documents/{{ doc.id }}#source-{{ source.id }}{% endif %}">{% if source.page %}第 {{ source.page }} 页{% else %}第 {{ source.line }} 行{% endif %}</a>{{ ' · ' if not loop.last else '' }}{% endfor %}{% if fact.method == 'local' %} · 旧版规则候选，可排除后重新用 LLM 解析{% endif %}</p>
+<div class="actions"><button name="status" value="confirmed">保存并确认</button><button class="secondary" name="status" value="pending">保存待确认</button><button class="text-button" name="status" value="rejected">排除</button></div>
+<p class="entry-message" role="status" aria-live="polite"></p>
+</form>
+<details><summary>修订记录与原始引用</summary><p data-history-hint class="hint">用户修改保留来源，但来源不自动证明补充内容。</p><blockquote>{{ fact.quote }}</blockquote>{% for h in fact.history %}<p class="hint">修订 {{ h.revision }} · {{ h.created_at|localtime }} · {{ {'pending':'待确认','confirmed':'已确认','rejected':'已排除'}[h.status] }}</p><p class="preserve">{{ h.text }}</p>{% endfor %}</details>
+</article>
+{% else %}<p class="hint category-empty">暂无此类经历，可以稍后补充。</p>{% endfor %}
+</section>
+{% endfor %}</section></div>
+<div class="review-next card">
+<span>已确认 <strong data-count="confirmed">{{ doc.counts.confirmed }}</strong> 条；已保存的内容可直接用于下一步。</span>
+<div class="actions"><a href="/profile?corpus={{ corpus }}">查看已确认档案</a><a class="button" href="/jobs/new?corpus={{ corpus }}">下一步：导入岗位 →</a></div>
+</div>
